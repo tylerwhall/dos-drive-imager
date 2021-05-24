@@ -1,0 +1,6 @@
+build
+*.obj
+*.sym
+*.map
+*.lst
+*.exe
