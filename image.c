@@ -19,7 +19,6 @@ int get_chs(int drive, int *cyl, int *heads, int *sectors)
     *heads = regs.h.dh;
     *sectors = regs.h.cl & ((1 << 6) - 1);
     *cyl = regs.h.ch;
-    printf("cx %x\n", regs.w.cx);
     *cyl |= (regs.w.cx & (128|64)) << 2;
 
     return regs.h.ah;
@@ -39,7 +38,6 @@ int main(int argc, char **argv)
         perror("malloc");
     }
 
-    printf("Hello\n");
     if (argc < 3) {
         printf("Usage: %s <drive number in hex, 80 for first hdd> <output file>\n");
         exit(2);
@@ -67,6 +65,7 @@ int main(int argc, char **argv)
 
     for (i=0; i<=cyl; i++) {
         for (j=0; j<=heads; j++) {
+            printf("Cyl %d Head %d\n", i,j);
             for (k=1; k<=sectors; k += NSECTORS) {
                 struct _ibm_diskinfo_t d;
 
@@ -78,7 +77,6 @@ int main(int argc, char **argv)
                 d.buffer = buf;
 
                 _bios_disk(_DISK_READ, &d);
-                printf("%d:%d:%d\n", i,j,k);
                 fwrite(buf, 512, NSECTORS, fp);
             }
         }
