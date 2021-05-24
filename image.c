@@ -48,7 +48,7 @@ int main(int argc, char **argv)
         exit(2);
     }
 
-    fp = fopen(argv[2], "w");
+    fp = fopen(argv[2], "wb");
     if (fp == NULL) {
         perror("open");
         exit(2);
@@ -82,6 +82,7 @@ int main(int argc, char **argv)
         }
     }
 
+    fclose(fp);
     free(buf);
 
     return 0;
