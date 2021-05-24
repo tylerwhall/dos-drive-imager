@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <i86.h>
 #include <bios.h>
 
@@ -67,16 +68,24 @@ int main(int argc, char **argv)
         for (j=0; j<=heads; j++) {
             printf("Cyl %d Head %d\n", i,j);
             for (k=1; k<=sectors; k += NSECTORS) {
+                int tries = 0;
                 struct _ibm_diskinfo_t d;
+                unsigned short status;
 
-                d.drive = drive_num;
-                d.head = j;
-                d.track = i;
-                d.sector = k;
-                d.nsectors = NSECTORS;
-                d.buffer = buf;
+                do {
+                    d.drive = drive_num;
+                    d.head = j;
+                    d.track = i;
+                    d.sector = k;
+                    d.nsectors = NSECTORS;
+                    d.buffer = buf;
 
-                _bios_disk(_DISK_READ, &d);
+                    status = _bios_disk(_DISK_READ, &d) >> 8;
+                } while (status && ++tries < 5);
+                if (status) {
+                    printf("Error %d at %d,%d,%d\n", status, i, j, k);
+                    memset(buf, 0, 512);
+                }
                 fwrite(buf, 512, NSECTORS, fp);
             }
         }
