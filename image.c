@@ -9,20 +9,57 @@
 int get_chs(int drive, int *cyl, int *heads, int *sectors)
 {
     union REGS regs;
-    struct SREGS sregs;
 
     regs.h.ah = 0x08;
     regs.h.dl = drive;
     regs.w.di = 0;
-    sregs.es = 0;
 
-    int86x(0x13, &regs, &regs, &sregs);
+    int86(0x13, &regs, &regs);
     *heads = regs.h.dh;
     *sectors = regs.h.cl & ((1 << 6) - 1);
     *cyl = regs.h.ch;
     *cyl |= (regs.w.cx & (128|64)) << 2;
 
     return regs.h.ah;
+}
+
+int read_sector(int drive, int cyl, int head, int sector, char* buf)
+{
+    union REGS regs;
+    int ret;
+
+    regs.h.ah = 0x02;
+    regs.h.al = 1; // Sectors to read
+    regs.w.bx = (unsigned short)buf;
+    regs.w.cx = ((cyl & 0xff) << 8) | ((cyl & 0x30) >> 2) | sector;
+    regs.h.dh = head;
+    regs.h.dl = drive;
+
+    int86(0x13, &regs, &regs);
+
+    ret = regs.h.ah;
+    if (regs.x.cflag) {
+        ret |= 0x100;
+    }
+
+    return ret;
+}
+
+int get_status_last_op(int drive)
+{
+    union REGS regs;
+    int ret;
+
+    regs.h.ah = 0x01;
+    regs.h.dl = drive;
+
+    int86(0x13, &regs, &regs);
+
+    ret = regs.h.ah;
+    if (regs.x.cflag) {
+        ret |= 0x100;
+    }
+    return ret;
 }
 
 int main(int argc, char **argv)
@@ -33,11 +70,12 @@ int main(int argc, char **argv)
     int cyl, heads, sectors;
     int rc;
     int i,j,k;
-    char *buf = malloc(1 << 10);
+    char *buf = malloc(512);
 
     if (!buf) {
         perror("malloc");
     }
+    memset(buf, 0, 512);
 
     if (argc < 3) {
         printf("Usage: %s <drive number in hex, 80 for first hdd> <output file>\n", argv[0]);
@@ -69,28 +107,20 @@ int main(int argc, char **argv)
             printf("Cyl %d Head %d\n", i,j);
             for (k=1; k<=sectors; k += NSECTORS) {
                 int tries = 0;
-                struct _ibm_diskinfo_t d;
                 unsigned short status;
 
                 do {
-                    d.drive = drive_num;
-                    d.head = j;
-                    d.track = i;
-                    d.sector = k;
-                    d.nsectors = NSECTORS;
-                    d.buffer = buf;
-
-                    status = _bios_disk(_DISK_READ, &d) >> 8;
+                    status = read_sector(drive_num, i, j, k, buf);
                 } while (status && ++tries < 5);
-                if (status) {
-                    printf("Error %d at %d,%d,%d\n", status, i, j, k);
-                    memset(buf, 0, 512);
+                if (1) {
+                    printf("get status = 0x%x\n", status);
                 }
                 fwrite(buf, 512, NSECTORS, fp);
             }
         }
     }
 
+    fflush(fp); // Just in case fclose is broken
     fclose(fp);
     free(buf);
 
