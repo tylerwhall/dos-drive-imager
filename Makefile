@@ -65,4 +65,10 @@ all: $(TARGETS)
 	@WL_TARGET=$* wlink @com.lnk file { $^ }
 
 clean:
-	rm -rf *~ *.o *.obj *.lst *.err *.exe *.com $(TARGETS)
+	rm -rf *~ *.o *.obj *.lst *.err *.exe *.com *.IMG $(TARGETS)
+
+test: image.exe
+	rm -f *.IMG
+	dd if=/dev/urandom of=DIN.IMG bs=512 count=20808
+	dosbox test.bat
+	cmp DIN.IMG DOUT.IMG
