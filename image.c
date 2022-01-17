@@ -3,6 +3,7 @@
 #include <string.h>
 #include <i86.h>
 #include <bios.h>
+#include <inttypes.h>
 
 #define NSECTORS (1)
 
@@ -67,6 +68,7 @@ int main(int argc, char **argv)
     int drive_num;
     char *endptr;
     FILE* fp;
+    FILE* log = NULL;
     int cyl, heads, sectors;
     int rc;
     int i,j,k;
@@ -78,7 +80,11 @@ int main(int argc, char **argv)
     memset(buf, 0, 512);
 
     if (argc < 3) {
-        printf("Usage: %s <drive number in hex, 80 for first hdd> <output file>\n", argv[0]);
+        printf("Usage: %s drive_number output_file <logfile>\n\n"
+               "\tDrive number is in the bios number in hex. 80 for first hdd.\n"
+               "\toutput_file: File to write. Will be created. Can use special device e.g. COM1\n"
+               "\tlogfile (optional): Log geometry and bad sectors to file\n",
+               argv[0]);
         exit(2);
     }
     drive_num = strtol(argv[1], &endptr, 16);
@@ -95,16 +101,31 @@ int main(int argc, char **argv)
 
     rc = get_chs(drive_num, &cyl, &heads, &sectors);
 
-    printf("SRW Cylinders: %d Heads: %d Sectors: %d\n", cyl+1, heads+1, sectors);
+    printf("Cylinders: %d Heads: %d Sectors: %d\n", cyl+1, heads+1, sectors);
 
     if (rc) {
         printf("Read Drive Paramters failed, status: %d\n", rc);
         exit(2);
     }
 
+    if (argc >= 4) {
+        printf("Log file %s\n", argv[3]);
+        log = fopen(argv[3], "w");
+        if (log == NULL) {
+            perror("open logfile");
+            exit(2);
+        }
+    }
+
+    if (log) {
+        fprintf(log, "Cylinders: %d Heads: %d Sectors: %d\n", cyl+1, heads+1, sectors);
+        fprintf(log, "Bad Sectors. Sector is 1-indexed.\nFormat: C,H,S byte_offset\n");
+        fflush(log);
+    }
+
     for (i=0; i<=cyl; i++) {
         for (j=0; j<=heads; j++) {
-            printf("Cyl %d Head %d\n", i,j);
+            printf("Cyl %d/%d Head %d/%d\n", i, cyl, j, heads);
             for (k=1; k<=sectors; k += NSECTORS) {
                 int tries = 0;
                 unsigned short status;
@@ -112,16 +133,26 @@ int main(int argc, char **argv)
                 do {
                     status = read_sector(drive_num, i, j, k, buf);
                 } while (status && ++tries < 5);
-                if (1) {
-                    printf("get status = 0x%x\n", status);
+                if (status) {
+                    memset(buf, 0, 512);
+                    printf("Error %x at %d,%d,%d\n", status, i, j, k);
+                    if (log) {
+                        uint32_t sector = ((uint32_t)i * (heads + 1) + j) * sectors + k - 1;
+                        sector *= 512;
+                        fprintf(log, "%d,%d,%d %"PRIu32"\n", i, j, k, sector);
+                        fflush(log);
+                    }
                 }
                 fwrite(buf, 512, NSECTORS, fp);
+                fflush(fp);
             }
         }
     }
 
     fflush(fp); // Just in case fclose is broken
     fclose(fp);
+    if (log)
+        fclose(log);
     free(buf);
 
     return 0;
