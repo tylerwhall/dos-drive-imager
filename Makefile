@@ -58,11 +58,11 @@ all: $(TARGETS)
 
 %.exe: %.obj
 	@echo " -WLINK-  Linking '$@'"
-	@WL_TARGET=$* wlink @build/exe.lnk file { $^ }
+	@WL_TARGET=$* wlink @exe.lnk file { $^ }
 
 %.com: %.obj
 	@echo " -WLINK-  Linking '$@'"
-	@WL_TARGET=$* wlink @build/com.lnk file { $^ }
+	@WL_TARGET=$* wlink @com.lnk file { $^ }
 
 clean:
 	rm -rf *~ *.o *.obj *.lst *.err *.exe *.com $(TARGETS)

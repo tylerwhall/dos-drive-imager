@@ -1,0 +1,17 @@
+# Comment
+option quiet
+
+libpath %WATCOM%/lib286
+libpath %WATCOM%/lib286/dos
+
+sort global
+
+format dos com
+libfile cstart_t.obj
+option dosseg
+option eliminate
+option map=%WL_TARGET%.map
+
+disable 19
+
+name %WL_TARGET%.com

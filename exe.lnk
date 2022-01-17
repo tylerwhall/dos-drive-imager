@@ -1,0 +1,18 @@
+# Comment
+option quiet
+
+libpath %WATCOM%/lib286
+libpath %WATCOM%/lib286/dos
+
+sort
+
+format dos
+option dosseg
+option eliminate
+option map=%WL_TARGET%.map
+
+debug watcom all
+option statics
+option symfile=%WL_TARGET%.sym
+
+name %WL_TARGET%.exe
