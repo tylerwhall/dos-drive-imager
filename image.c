@@ -40,7 +40,7 @@ int main(int argc, char **argv)
     }
 
     if (argc < 3) {
-        printf("Usage: %s <drive number in hex, 80 for first hdd> <output file>\n");
+        printf("Usage: %s <drive number in hex, 80 for first hdd> <output file>\n", argv[0]);
         exit(2);
     }
     drive_num = strtol(argv[1], &endptr, 16);
