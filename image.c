@@ -32,7 +32,7 @@ int read_sector(int drive, int cyl, int head, int sector, char* buf)
     regs.h.ah = 0x02;
     regs.h.al = 1; // Sectors to read
     regs.w.bx = (unsigned short)buf;
-    regs.w.cx = ((cyl & 0xff) << 8) | ((cyl & 0x30) >> 2) | sector;
+    regs.w.cx = ((cyl & 0xff) << 8) | ((cyl >> 2) & 0xc0) | sector;
     regs.h.dh = head;
     regs.h.dl = drive;
 
